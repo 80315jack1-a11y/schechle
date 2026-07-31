@@ -6,12 +6,16 @@ import { generateId } from '@/lib/storage'
 import { PRESET_COLORS } from '@/lib/constants'
 import { parseTime } from '@/lib/timeUtils'
 
+const DAY_LABELS = ['週一', '週二', '週三', '週四', '週五', '週六']
+
 interface Props {
-  onAddDeadline: (deadline: Deadline) => void
-  onAddTask: (task: TaskBlock) => void
+  selectedDay: number
+  onSelectDay: (day: number) => void
+  onAddDeadline: (dayIndex: number, deadline: Deadline) => void
+  onAddTask: (dayIndex: number, task: TaskBlock) => void
 }
 
-export default function AddEventPanel({ onAddDeadline, onAddTask }: Props) {
+export default function AddEventPanel({ selectedDay, onSelectDay, onAddDeadline, onAddTask }: Props) {
   const [mode, setMode] = useState<'deadline' | 'task'>('task')
   const [label, setLabel] = useState('')
   const [time, setTime] = useState('21:00')
@@ -24,7 +28,7 @@ export default function AddEventPanel({ onAddDeadline, onAddTask }: Props) {
     if (!label.trim()) return
 
     if (mode === 'deadline') {
-      onAddDeadline({
+      onAddDeadline(selectedDay, {
         id: generateId(),
         type: 'deadline',
         label: label.trim(),
@@ -32,7 +36,7 @@ export default function AddEventPanel({ onAddDeadline, onAddTask }: Props) {
         color,
       })
     } else {
-      onAddTask({
+      onAddTask(selectedDay, {
         id: generateId(),
         type: 'task',
         label: label.trim(),
@@ -48,6 +52,27 @@ export default function AddEventPanel({ onAddDeadline, onAddTask }: Props) {
   return (
     <div className="bg-gray-800 rounded-xl p-4 space-y-4">
       <h2 className="text-lg font-semibold text-white">新增事件</h2>
+
+      {/* Day selector */}
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">加到哪一天</label>
+        <div className="grid grid-cols-3 gap-1">
+          {DAY_LABELS.map((d, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onSelectDay(i)}
+              className={`py-1.5 px-2 rounded text-xs font-medium transition-colors ${
+                selectedDay === i
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Mode toggle */}
       <div className="flex gap-2">
@@ -132,7 +157,7 @@ export default function AddEventPanel({ onAddDeadline, onAddTask }: Props) {
                 key={c}
                 type="button"
                 onClick={() => setColor(c)}
-                className={`w-7 h-7 rounded-full transition-transform ${
+                className={`w-6 h-6 rounded-full transition-transform ${
                   color === c ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-gray-800' : 'hover:scale-110'
                 }`}
                 style={{ backgroundColor: c }}
@@ -147,7 +172,7 @@ export default function AddEventPanel({ onAddDeadline, onAddTask }: Props) {
           type="submit"
           className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors"
         >
-          新增{mode === 'task' ? '活動' : '時間線'}
+          新增到{DAY_LABELS[selectedDay]}
         </button>
       </form>
     </div>

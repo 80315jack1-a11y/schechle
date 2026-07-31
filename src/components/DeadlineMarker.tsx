@@ -8,13 +8,13 @@ interface Props {
   onDelete: (id: string) => void
 }
 
-/** Horizontal colored line representing a deadline */
+/** Horizontal colored line representing a deadline (within a day column) */
 export default function DeadlineMarker({ deadline, onDelete }: Props) {
   const top = minutesToPixels(deadline.time)
 
   return (
     <div
-      className="absolute left-16 right-0 flex items-center group z-10"
+      className="absolute left-0 right-0 flex items-center group z-10"
       style={{ top }}
     >
       {/* The line */}
@@ -24,15 +24,15 @@ export default function DeadlineMarker({ deadline, onDelete }: Props) {
       />
       {/* Label */}
       <div
-        className="absolute left-2 -translate-y-full px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
+        className="absolute left-1 -translate-y-full px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap max-w-[90%] truncate"
         style={{ backgroundColor: deadline.color, color: '#fff' }}
       >
         {deadline.label}
       </div>
       {/* Delete button (visible on hover) */}
       <button
-        onClick={() => onDelete(deadline.id)}
-        className="absolute right-2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+        onClick={(e) => { e.stopPropagation(); onDelete(deadline.id) }}
+        className="absolute right-1 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
         aria-label="刪除"
       >
         ×

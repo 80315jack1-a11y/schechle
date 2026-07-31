@@ -11,7 +11,7 @@ interface Props {
   onDelete: (id: string) => void
 }
 
-/** A draggable, resizable colored block representing a task */
+/** A draggable, resizable colored block within a day column */
 export default function TaskBlockItem({ task, onUpdate, onDelete }: Props) {
   const blockRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
@@ -27,6 +27,7 @@ export default function TaskBlockItem({ task, onUpdate, onDelete }: Props) {
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (isResizing.current) return
     e.preventDefault()
+    e.stopPropagation()
     isDragging.current = true
 
     const startY = e.clientY
@@ -38,7 +39,6 @@ export default function TaskBlockItem({ task, onUpdate, onDelete }: Props) {
       const newPixelTop = startTop + deltaY
       let newStartMinutes = snapToGrid(pixelsToMinutes(newPixelTop))
 
-      // Clamp
       newStartMinutes = Math.max(minMinutes, newStartMinutes)
       newStartMinutes = Math.min(maxMinutes - task.duration, newStartMinutes)
 
@@ -70,7 +70,6 @@ export default function TaskBlockItem({ task, onUpdate, onDelete }: Props) {
       const deltaMinutes = deltaY / MINUTE_HEIGHT
       let newDuration = snapToGrid(startDuration + deltaMinutes)
 
-      // Minimum 10 minutes, max to end of timeline
       newDuration = Math.max(10, newDuration)
       newDuration = Math.min(maxMinutes - task.startTime, newDuration)
 
@@ -90,32 +89,31 @@ export default function TaskBlockItem({ task, onUpdate, onDelete }: Props) {
   return (
     <div
       ref={blockRef}
-      className="absolute left-20 right-4 rounded-lg shadow-lg cursor-grab active:cursor-grabbing group select-none overflow-hidden"
+      className="absolute left-1 right-1 rounded-md shadow-lg cursor-grab active:cursor-grabbing group select-none overflow-hidden z-10"
       style={{
         top,
-        height: Math.max(height, 20),
+        height: Math.max(height, 18),
         backgroundColor: task.color,
         opacity: 0.9,
       }}
       onMouseDown={handleMouseDown}
     >
       {/* Content */}
-      <div className="px-3 py-1 h-full flex flex-col justify-between">
-        <div className="flex items-center justify-between">
-          <span className="text-white font-medium text-sm truncate">
+      <div className="px-2 py-0.5 h-full flex flex-col justify-between">
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-white font-medium text-xs truncate">
             {task.label}
           </span>
-          {/* Delete button */}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(task.id) }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-white/80 hover:text-white text-lg leading-none"
+            className="opacity-0 group-hover:opacity-100 transition-opacity text-white/80 hover:text-white text-sm leading-none shrink-0"
             aria-label="刪除"
           >
             ×
           </button>
         </div>
-        {height > 30 && (
-          <span className="text-white/70 text-xs">
+        {height > 28 && (
+          <span className="text-white/70 text-[10px]">
             {formatTime(task.startTime)} – {formatTime(task.startTime + task.duration)}
           </span>
         )}

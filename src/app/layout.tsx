@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Timeline - 日時間軸',
-  description: '視覺化每日流程規劃工具',
+  title: 'Timeline - 週時間軸',
+  description: '視覺化每週流程規劃工具',
 }
 
 export default function RootLayout({

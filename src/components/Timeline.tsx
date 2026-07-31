@@ -2,55 +2,92 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { TimelineEvent, Deadline, TaskBlock } from '@/types/timeline'
-import { loadTimeline, saveTimeline } from '@/lib/storage'
+import { loadWeek, saveWeek, getWeekDates, getWeekKey } from '@/lib/storage'
 import { TIMELINE_HEIGHT } from '@/lib/constants'
 import TimeGrid from './TimeGrid'
-import DeadlineMarker from './DeadlineMarker'
-import TaskBlockItem from './TaskBlockItem'
+import DayColumn from './DayColumn'
 import AddEventPanel from './AddEventPanel'
 
 export default function Timeline() {
-  const [events, setEvents] = useState<TimelineEvent[]>([])
+  const [days, setDays] = useState<TimelineEvent[][]>([[], [], [], [], [], []])
   const [loaded, setLoaded] = useState(false)
+  const [selectedDay, setSelectedDay] = useState(0)
+  const [weekOffset, setWeekOffset] = useState(0)
 
-  // Load from localStorage on mount
+  // Compute the reference date for the displayed week
+  const getRefDate = useCallback(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + weekOffset * 7)
+    return d
+  }, [weekOffset])
+
+  // Load from localStorage on mount or when week changes
   useEffect(() => {
-    const data = loadTimeline()
-    setEvents(data)
+    const refDate = getRefDate()
+    const key = getWeekKey(refDate)
+    const data = loadWeek(key)
+    setDays(data)
     setLoaded(true)
-  }, [])
+  }, [weekOffset, getRefDate])
 
-  // Save whenever events change
+  // Save whenever days change
   useEffect(() => {
     if (loaded) {
-      saveTimeline(events)
+      const refDate = getRefDate()
+      const key = getWeekKey(refDate)
+      saveWeek(days, key)
     }
-  }, [events, loaded])
+  }, [days, loaded, getRefDate])
 
-  const deadlines = events.filter((e): e is Deadline => e.type === 'deadline')
-  const tasks = events.filter((e): e is TaskBlock => e.type === 'task')
+  // Determine today's day index within current week
+  const today = new Date()
+  const weekDates = getWeekDates(getRefDate())
+  const todayIndex = weekDates.findIndex(
+    (d) => d.toDateString() === today.toDateString()
+  )
 
-  const handleAddDeadline = useCallback((deadline: Deadline) => {
-    setEvents((prev) => [...prev, deadline])
+  // Auto-select today on initial load
+  useEffect(() => {
+    if (todayIndex >= 0 && weekOffset === 0) {
+      setSelectedDay(todayIndex)
+    }
+  }, [todayIndex, weekOffset])
+
+  const handleAddDeadline = useCallback((dayIndex: number, deadline: Deadline) => {
+    setDays((prev) => {
+      const next = [...prev]
+      next[dayIndex] = [...next[dayIndex], deadline]
+      return next
+    })
   }, [])
 
-  const handleAddTask = useCallback((task: TaskBlock) => {
-    setEvents((prev) => [...prev, task])
+  const handleAddTask = useCallback((dayIndex: number, task: TaskBlock) => {
+    setDays((prev) => {
+      const next = [...prev]
+      next[dayIndex] = [...next[dayIndex], task]
+      return next
+    })
   }, [])
 
-  const handleUpdateTask = useCallback((id: string, updates: Partial<TaskBlock>) => {
-    setEvents((prev) =>
-      prev.map((e) => {
+  const handleUpdateTask = useCallback((dayIndex: number, id: string, updates: Partial<TaskBlock>) => {
+    setDays((prev) => {
+      const next = [...prev]
+      next[dayIndex] = next[dayIndex].map((e) => {
         if (e.id === id && e.type === 'task') {
           return { ...e, ...updates } as TaskBlock
         }
         return e
       })
-    )
+      return next
+    })
   }, [])
 
-  const handleDelete = useCallback((id: string) => {
-    setEvents((prev) => prev.filter((e) => e.id !== id))
+  const handleDelete = useCallback((dayIndex: number, id: string) => {
+    setDays((prev) => {
+      const next = [...prev]
+      next[dayIndex] = next[dayIndex].filter((e) => e.id !== id)
+      return next
+    })
   }, [])
 
   if (!loaded) {
@@ -61,63 +98,69 @@ export default function Timeline() {
     )
   }
 
+  const formatDateLabel = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`
+
   return (
     <div className="h-screen flex">
-      {/* Left sidebar: Add event panel */}
-      <aside className="w-72 shrink-0 p-4 overflow-y-auto border-r border-gray-700/50">
-        <h1 className="text-2xl font-bold text-white mb-6">
-          📅 日時間軸
-        </h1>
+      {/* Left sidebar */}
+      <aside className="w-64 shrink-0 p-4 overflow-y-auto border-r border-gray-700/50 flex flex-col">
+        <h1 className="text-xl font-bold text-white mb-2">📅 週時間軸</h1>
+
+        {/* Week navigation */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => setWeekOffset((w) => w - 1)}
+            className="text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-700"
+          >
+            ←
+          </button>
+          <span className="text-sm text-gray-300">
+            {formatDateLabel(weekDates[0])} ~ {formatDateLabel(weekDates[5])}
+          </span>
+          <button
+            onClick={() => setWeekOffset((w) => w + 1)}
+            className="text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-700"
+          >
+            →
+          </button>
+        </div>
+
+        {weekOffset !== 0 && (
+          <button
+            onClick={() => setWeekOffset(0)}
+            className="text-xs text-blue-400 hover:text-blue-300 mb-3"
+          >
+            回到本週
+          </button>
+        )}
+
         <AddEventPanel
+          selectedDay={selectedDay}
+          onSelectDay={setSelectedDay}
           onAddDeadline={handleAddDeadline}
           onAddTask={handleAddTask}
         />
-
-        {/* Event list summary */}
-        {events.length > 0 && (
-          <div className="mt-6 space-y-2">
-            <h3 className="text-sm text-gray-400 font-medium">今日事件 ({events.length})</h3>
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className="flex items-center gap-2 text-sm text-gray-300"
-              >
-                <div
-                  className="w-3 h-3 rounded-sm shrink-0"
-                  style={{ backgroundColor: event.color }}
-                />
-                <span className="truncate">{event.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
       </aside>
 
-      {/* Main timeline area */}
-      <main className="flex-1 overflow-y-auto timeline-scroll p-4">
-        <div
-          className="relative"
-          style={{ height: TIMELINE_HEIGHT + 40 }}
-        >
-          {/* Time grid (background) */}
+      {/* Main weekly timeline area */}
+      <main className="flex-1 overflow-y-auto timeline-scroll">
+        <div className="flex h-full" style={{ minHeight: TIMELINE_HEIGHT + 60 }}>
+          {/* Time labels */}
           <TimeGrid />
 
-          {/* Deadline markers */}
-          {deadlines.map((d) => (
-            <DeadlineMarker
-              key={d.id}
-              deadline={d}
-              onDelete={handleDelete}
-            />
-          ))}
-
-          {/* Task blocks */}
-          {tasks.map((t) => (
-            <TaskBlockItem
-              key={t.id}
-              task={t}
-              onUpdate={handleUpdateTask}
-              onDelete={handleDelete}
+          {/* Day columns */}
+          {weekDates.map((date, i) => (
+            <DayColumn
+              key={i}
+              dayIndex={i}
+              dayLabel={`週${['一', '二', '三', '四', '五', '六'][i]}`}
+              dateLabel={formatDateLabel(date)}
+              events={days[i]}
+              isToday={i === todayIndex}
+              isSelected={i === selectedDay}
+              onSelect={() => setSelectedDay(i)}
+              onUpdateTask={(id, updates) => handleUpdateTask(i, id, updates)}
+              onDelete={(id) => handleDelete(i, id)}
             />
           ))}
         </div>
