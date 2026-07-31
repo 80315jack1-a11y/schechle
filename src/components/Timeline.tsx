@@ -7,6 +7,7 @@ import { TIMELINE_HEIGHT } from '@/lib/constants'
 import TimeGrid from './TimeGrid'
 import DayColumn from './DayColumn'
 import AddEventPanel from './AddEventPanel'
+import InstallButton from './InstallButton'
 
 export default function Timeline() {
   const [days, setDays] = useState<TimelineEvent[][]>([[], [], [], [], [], []])
@@ -140,6 +141,11 @@ export default function Timeline() {
           onAddDeadline={handleAddDeadline}
           onAddTask={handleAddTask}
         />
+
+        {/* Install as desktop app */}
+        <div className="mt-4 pt-4 border-t border-gray-700/50">
+          <InstallButton />
+        </div>
       </aside>
 
       {/* Main weekly timeline area */}
