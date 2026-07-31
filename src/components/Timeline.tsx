@@ -8,6 +8,7 @@ import TimeGrid from './TimeGrid'
 import DayColumn from './DayColumn'
 import AddEventPanel from './AddEventPanel'
 import InstallButton from './InstallButton'
+import DataSync from './DataSync'
 
 export default function Timeline() {
   const [days, setDays] = useState<TimelineEvent[][]>([[], [], [], [], [], []])
@@ -143,7 +144,8 @@ export default function Timeline() {
         />
 
         {/* Install as desktop app */}
-        <div className="mt-4 pt-4 border-t border-gray-700/50">
+        <div className="mt-4 pt-4 border-t border-gray-700/50 space-y-3">
+          <DataSync days={days} onImport={(imported) => setDays(imported)} />
           <InstallButton />
         </div>
       </aside>
