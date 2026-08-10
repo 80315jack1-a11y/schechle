@@ -151,7 +151,7 @@ export default function Timeline() {
       </aside>
 
       {/* Main weekly timeline area */}
-      <main className="flex-1 overflow-y-auto timeline-scroll">
+      <main className="flex-1 overflow-y-auto timeline-scroll pt-1">
         <div className="flex h-full" style={{ minHeight: TIMELINE_HEIGHT + 60 }}>
           {/* Time labels */}
           <TimeGrid />
