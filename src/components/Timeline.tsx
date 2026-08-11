@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { TimelineEvent, Deadline, TaskBlock } from '@/types/timeline'
-import { loadWeek, saveWeek, getWeekDates, getWeekKey } from '@/lib/storage'
+import { loadWeek, saveWeek, getWeekDates, getWeekKey, generateId } from '@/lib/storage'
 import { TIMELINE_HEIGHT } from '@/lib/constants'
 import TimeGrid from './TimeGrid'
 import DayColumn from './DayColumn'
@@ -15,6 +15,8 @@ export default function Timeline() {
   const [loaded, setLoaded] = useState(false)
   const [selectedDay, setSelectedDay] = useState(0)
   const [weekOffset, setWeekOffset] = useState(0)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const [clipboard, setClipboard] = useState<TimelineEvent | null>(null)
 
   // Compute the reference date for the displayed week
   const getRefDate = useCallback(() => {
@@ -54,6 +56,43 @@ export default function Timeline() {
       setSelectedDay(todayIndex)
     }
   }, [todayIndex, weekOffset])
+
+  // Keyboard shortcuts: Ctrl+C to copy, Ctrl+V to paste
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'c' && selectedEventId) {
+        // Find the selected event across all days
+        for (const dayEvents of days) {
+          const event = dayEvents.find((ev) => ev.id === selectedEventId)
+          if (event) {
+            setClipboard(event)
+            break
+          }
+        }
+      }
+      if (e.ctrlKey && e.key === 'v' && clipboard) {
+        // Paste to currently selected day with a new ID
+        const newEvent = { ...clipboard, id: generateId() }
+        setDays((prev) => {
+          const next = [...prev]
+          next[selectedDay] = [...next[selectedDay], newEvent]
+          return next
+        })
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedEventId, clipboard, days, selectedDay])
+
+  // Deselect event when clicking empty area
+  const handleDeselectEvent = useCallback(() => {
+    setSelectedEventId(null)
+  }, [])
+
+  const handleSelectEvent = useCallback((id: string) => {
+    setSelectedEventId(id)
+  }, [])
 
   const handleAddDeadline = useCallback((dayIndex: number, deadline: Deadline) => {
     setDays((prev) => {
@@ -145,6 +184,13 @@ export default function Timeline() {
 
         {/* Install as desktop app */}
         <div className="mt-4 pt-4 border-t border-gray-700/50 space-y-3">
+          {clipboard && (
+            <div className="text-xs text-green-400 bg-green-900/30 rounded px-2 py-1.5">
+              ✂ 已複製：{clipboard.type === 'task' ? (clipboard as TaskBlock).label : (clipboard as Deadline).label}
+              <br />
+              <span className="text-green-300/70">點選目標天 → Ctrl+V 貼上</span>
+            </div>
+          )}
           <DataSync days={days} onImport={(imported) => setDays(imported)} />
           <InstallButton />
         </div>
@@ -166,7 +212,9 @@ export default function Timeline() {
               events={days[i]}
               isToday={i === todayIndex}
               isSelected={i === selectedDay}
-              onSelect={() => setSelectedDay(i)}
+              selectedEventId={selectedEventId}
+              onSelect={() => { setSelectedDay(i); handleDeselectEvent() }}
+              onSelectEvent={handleSelectEvent}
               onUpdateTask={(id, updates) => handleUpdateTask(i, id, updates)}
               onDelete={(id) => handleDelete(i, id)}
             />

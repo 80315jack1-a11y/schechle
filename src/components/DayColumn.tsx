@@ -12,7 +12,9 @@ interface Props {
   events: TimelineEvent[]
   isToday: boolean
   isSelected: boolean
+  selectedEventId: string | null
   onSelect: () => void
+  onSelectEvent: (id: string) => void
   onUpdateTask: (id: string, updates: Partial<TaskBlock>) => void
   onDelete: (id: string) => void
 }
@@ -26,7 +28,9 @@ export default function DayColumn({
   events,
   isToday,
   isSelected,
+  selectedEventId,
   onSelect,
+  onSelectEvent,
   onUpdateTask,
   onDelete,
 }: Props) {
@@ -80,6 +84,8 @@ export default function DayColumn({
           <TaskBlockItem
             key={t.id}
             task={t}
+            isSelected={t.id === selectedEventId}
+            onSelect={onSelectEvent}
             onUpdate={onUpdateTask}
             onDelete={onDelete}
           />

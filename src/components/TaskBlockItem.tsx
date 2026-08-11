@@ -7,12 +7,14 @@ import { MINUTE_HEIGHT, START_HOUR, END_HOUR } from '@/lib/constants'
 
 interface Props {
   task: TaskBlock
+  isSelected?: boolean
+  onSelect?: (id: string) => void
   onUpdate: (id: string, updates: Partial<TaskBlock>) => void
   onDelete: (id: string) => void
 }
 
 /** A draggable, resizable colored block within a day column */
-export default function TaskBlockItem({ task, onUpdate, onDelete }: Props) {
+export default function TaskBlockItem({ task, isSelected, onSelect, onUpdate, onDelete }: Props) {
   const blockRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
   const isResizing = useRef(false)
@@ -28,6 +30,10 @@ export default function TaskBlockItem({ task, onUpdate, onDelete }: Props) {
     if (isResizing.current) return
     e.preventDefault()
     e.stopPropagation()
+
+    // Select this task on click
+    if (onSelect) onSelect(task.id)
+
     isDragging.current = true
 
     const startY = e.clientY
@@ -53,7 +59,7 @@ export default function TaskBlockItem({ task, onUpdate, onDelete }: Props) {
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-  }, [top, task.id, task.duration, onUpdate, minMinutes, maxMinutes])
+  }, [top, task.id, task.duration, onUpdate, onSelect, minMinutes, maxMinutes])
 
   // Drag bottom edge to resize
   const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
@@ -89,7 +95,9 @@ export default function TaskBlockItem({ task, onUpdate, onDelete }: Props) {
   return (
     <div
       ref={blockRef}
-      className="absolute left-1 right-1 rounded-md shadow-lg cursor-grab active:cursor-grabbing group select-none overflow-hidden z-10"
+      className={`absolute left-1 right-1 rounded-md shadow-lg cursor-grab active:cursor-grabbing group select-none overflow-hidden z-10 ${
+        isSelected ? 'ring-2 ring-white ring-offset-1 ring-offset-transparent' : ''
+      }`}
       style={{
         top,
         height: Math.max(height, 18),
